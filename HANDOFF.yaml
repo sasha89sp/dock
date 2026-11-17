@@ -1,0 +1,48 @@
+project: RocketDock Next
+version: 1.0.0+1
+status: native_win32_layer_and_real_rocketdock_import_written_NOT_COMPILED
+platform: Windows 10/11
+architecture: Flutter/Dart, Clean Architecture, Feature-First
+verification_environment:
+  note: Authoring sandbox is Linux without Flutter/Dart SDK or Windows. NOTHING below was compiled, analyzed, tested or run.
+portable_requirements:
+  - All mutable settings in data/settings.json beside the executable.
+  - No SharedPreferences/AppData, no registry writes.
+  - Release build script creates data/Icons, data/Themes, data/Backups and portable.mode.
+completed_written_unverified:
+  - RocketDock importer REWRITTEN against a real 1.3.5 Settings.ini (cp1251, [Software\RocketDock], flat N-Key entries in [Software\RocketDock\Icons]); fixture test/fixtures/rocketdock_1_3_5_Settings.ini (trimmed, user name anonymised).
+  - DockItem: separators, arguments, workingDirectory, iconPath2; DockSettings: monitorIndex, edgeOffset.
+  - lib/core/platform/windows/: win32_bindings (dart:ffi, new dep ffi), native_window (hwnd lookup, frameless/toolwindow/topmost, transparency attempt, monitors, DPI), dock_geometry (pure), window_tracker (enumerate/activate/minimize/close), icon_service (PrivateExtractIconsW + SHGetFileInfo -> ui.Image, file?index), native_menu (TrackPopupMenu).
+  - AppLauncher uses ShellExecuteW (args, working dir, ::{CLSID} via shell:, [RecycleBin]).
+  - features/dock: DockLayout (pure), DockWindowController (placement, auto-hide polling + animation, multi-monitor by index), DockWindow (real icons, zoom with neighbours, running dots, minimized windows as items, native context menu, drag reorder).
+  - Settings launches dock as separate process: RocketDockNext.exe --dock.
+  - Tests written (unrun): importer (real fixture), dock_geometry/layout.
+real_ini_facts_confirmed_from_user_file:
+  - Encoding ANSI/cp1251, CRLF. Sections: [Software\RocketDock], [Software\RocketDock\Icons] (count=N, keys "<n>-FileName|FileName2|Title|Command|Arguments|WorkingDirectory|ShowCmd|OpenRunning|IsSeparator|UseContext|DockletFile"), [Software\RocketDock\WindowFilters] (count).
+  - FileName = icon source "path?index" (negative = resource id; large positives after EXE paths are NOT confirmed as indexes -> ignored); Command = launch target; specials "::{CLSID}" and "[RecycleBin]"; relative icon "Icons\\x.png".
+  - Mapped: IconMin->iconSize, IconMax/IconMin->zoom, ZoomWidth->neighbors, ZoomTicks->animationMs, ThemeOpacity, LockIcons, AutoHide, AutoHideDelay, PopupDelay, ManageWindows->minimizeToDock, ShowRunning, OpenRunning, HideLabels, Offset, Theme, Side==0 -> top.
+  - NOT confirmed (not applied, warned): Side 1/2/3 meaning, Monitor numbering, vOffset, IconQuality, HoverFX, IconActivationFX, zOrderMode, fonts, hotkey.
+not_yet_verified:
+  - flutter pub get / analyze / test / Windows build and runtime (needs Windows + Flutter stable + VS 2022 C++ workload).
+  - Per-pixel transparency (SetWindowCompositionAttribute + DWM glass) may still render a black/opaque background with the stock runner; may require editing windows/runner after `flutter create`.
+  - WS_EX_NOACTIVATE + TrackPopupMenu focus behaviour; auto-hide polling; multi-monitor DPI placement; PrivateExtractIconsW/SHGetFileInfo icon extraction; running-window matching by exe path (UWP/ApplicationFrameHost apps not matched).
+  - Skins/themes and Docklets are only copied, not applied/executed. WindowFilters not applied.
+  - Positive icon indexes after EXE paths in the INI: meaning unknown.
+known_limitations:
+  - Window covers its bounding box (transparent areas may block clicks until verified); no AppBar work-area reservation; dock process and settings process both write settings.json (last writer wins).
+  - Removing the last item makes built-in defaults reappear.
+next_step: |
+  On Windows: scripts/build_windows.ps1 (Flutter stable + VS C++). Fix compile errors in lib/core/platform/windows/* first.
+  Run RocketDockNext.exe --dock and check: transparency, top/bottom/left/right placement, auto-hide, second monitor, icons, context menu.
+  Then import the real Settings.ini together with its Icons folder and compare with RocketDock.
+ci:
+  - .github/workflows/windows.yml runs flutter create (if windows/ missing), pub get, analyze, test, build windows --release on windows-latest and uploads the Release folder as an artifact. analyze/test are continue-on-error until the first green run; remove that once stable. NOT yet run.
+todo_file: TODO.md  # полный чек-лист незавершённого; обновлять после каждой задачи
+session_2_changes:
+  - build: added --no-tree-shake-icons, BINARY_NAME=RocketDockNext patch, portable layout in build_windows.ps1 (previously claimed but missing).
+  - settings: defaults seeded once; dock reloads settings.json when changed by settings window; int clamp results cast with toInt().
+  - static review of ffi/dart code done by reading only; not compiled.
+session_3_changes:
+  - settings UI: item editor dialog (item_editor_dialog.dart), reorderable item list, separators, real monitor dropdown, activation effect (new DockSettings.activationEffect).
+  - fixed latent bug: DockSettings default items was a const list (add() would throw); now mutable; reset() seeds default items.
+  - still NOT compiled/run.

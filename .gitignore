@@ -1,0 +1,18 @@
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+.dart_tool/
+.idea/
+.vscode/
+*.iml
+
+# Local runtime data (never commit your own settings or imported RocketDock assets)
+data/settings.json
+data/settings.json.*
+data/RocketDockAssets/
+data/Backups/*
+!data/Backups/.keep
+*.corrupt
+.DS_Store

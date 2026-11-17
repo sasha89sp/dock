@@ -1,0 +1,38 @@
+name: windows-build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Create Windows runner if missing
+        shell: pwsh
+        run: |
+          if (-not (Test-Path windows/runner/Runner.rc)) { flutter create --platforms=windows . }
+          $cmake = "windows/CMakeLists.txt"
+          (Get-Content $cmake -Raw) -replace 'set\(BINARY_NAME "[^"]+"\)', 'set(BINARY_NAME "RocketDockNext")' | Set-Content $cmake -NoNewline
+      - run: flutter pub get
+      - run: flutter analyze
+        continue-on-error: true
+      - run: flutter test
+        continue-on-error: true
+      - run: flutter build windows --release --no-tree-shake-icons
+      - name: Make portable layout
+        shell: pwsh
+        run: |
+          $rel = "build/windows/x64/runner/Release"
+          New-Item -ItemType Directory -Force "$rel/data/Icons","$rel/data/Themes","$rel/data/Backups" | Out-Null
+          New-Item -ItemType File -Force "$rel/portable.mode" | Out-Null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RocketDockNext-windows-release
+          path: build/windows/x64/runner/Release
